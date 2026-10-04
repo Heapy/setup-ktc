@@ -58,7 +58,6 @@ jobs:
       - uses: ./
         with:
           cache-key-suffix: smoke-${{ github.run_id }}-${{ github.run_attempt }}
-          cache-konan: 'true'
       - name: Write cache round-trip marker
         shell: bash
         run: |
@@ -80,7 +79,6 @@ jobs:
         id: setup
         with:
           cache-key-suffix: smoke-${{ github.run_id }}-${{ github.run_attempt }}
-          cache-konan: 'true'
           cache-read-only: 'true'
       - name: Verify remote cache restored in a fresh job
         shell: bash

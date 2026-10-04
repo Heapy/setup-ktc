@@ -2,7 +2,7 @@
 
 GitHub Action for **JetBrains Kotlin Toolchain** (formerly Amper). Installs a
 versioned, checksum-verified CLI wrapper on Linux, macOS, and Windows; optionally
-caches distributions, dependencies, and provisioned JDKs.
+caches distributions, dependencies, provisioned JDKs, and Kotlin/Native data.
 
 ## Usage
 
@@ -31,7 +31,7 @@ Versions before 0.12 are unsupported.
 | `version` | `auto` | Exact toolchain version, or project-wrapper detection |
 | `working-directory` | `.` | Project directory relative to workspace |
 | `cache` | `true` | Cache distributions, dependencies, and JDKs |
-| `cache-konan` | `false` | Also cache Kotlin/Native data in `KONAN_DATA_DIR` or `~/.konan`; requires `cache: true` |
+| `cache-konan` | `true` | Cache Kotlin/Native data in `KONAN_DATA_DIR` or `~/.konan`; requires `cache: true` |
 | `cache-key-suffix` | empty | Manually invalidate a cache namespace |
 | `cache-read-only` | `auto` | Restore only unless the event is push, workflow_dispatch, or schedule |
 | `wrapper-sha256` | empty | Trusted SHA-256 of the OS-specific wrapper |
@@ -90,14 +90,16 @@ saving where GitHub's cache token permits it. GitHub's job-level `cache-mode`
 remains authoritative. Keep a successful default-branch build to warm shared caches.
 Do not use `pull_request_target` to execute untrusted fork code.
 
-These caches cover the two Kotlin Toolchain cache roots. For projects with native
-targets, opt into Kotlin/Native data caching as well:
+The action caches both Kotlin Toolchain cache roots and Kotlin/Native data by
+default. Native cache restoration happens before the build, so a fresh runner can
+reuse downloads from an earlier native build. If the native directory does not
+exist, there is no native cache to save. No project-model detection is required.
+Disable only the native cache when it is unnecessary:
 
 ```yaml
 - uses: Heapy/setup-ktc@v1
   with:
-    version: auto
-    cache-konan: true
+    cache-konan: false
 ```
 
 Native data uses a separate cache namespace with the same OS, runner architecture,

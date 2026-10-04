@@ -15,7 +15,7 @@ inputs:
     default: 'true'
   cache-konan:
     description: Also cache Kotlin/Native data in KONAN_DATA_DIR or ~/.konan; requires cache true
-    default: 'false'
+    default: 'true'
   cache-key-suffix:
     description: Extra cache key component for manually invalidating caches
     default: ''

@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- Add optional Kotlin/Native data caching with `cache-konan`, respecting
-  `KONAN_DATA_DIR`, the existing restore-only policy, and `cache: false`.
+- Cache Kotlin/Native data by default, respecting `KONAN_DATA_DIR` and the existing
+  restore-only policy. Disable it with `cache-konan: false` or `cache: false`.
 
 ## 1.0.1
 

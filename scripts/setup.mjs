@@ -92,7 +92,7 @@ function record(file, key, value) {
 
 export async function prepare(env = process.env) {
   const cacheEnabled = parseBoolean(env.INPUT_CACHE ?? 'true', 'cache');
-  const cacheKonan = parseBoolean(env.INPUT_CACHE_KONAN ?? 'false', 'cache-konan');
+  const cacheKonan = parseBoolean(env.INPUT_CACHE_KONAN ?? 'true', 'cache-konan');
   const konanEnabled = cacheEnabled && cacheKonan;
   const konanPath = konanEnabled ? (env.KONAN_DATA_DIR || path.join(homedir(), '.konan')) : '';
   if (konanEnabled && (!path.isAbsolute(konanPath) || /[\r\n]/.test(konanPath))) {

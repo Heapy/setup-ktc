@@ -25,16 +25,26 @@ async function fixture(t, inputs = {}) {
   })) };
 }
 
-test('native caching is disabled by default without changing toolchain cache paths', async t => {
+test('native caching is enabled by default without changing toolchain cache paths', async t => {
   const f = await fixture(t);
   const result = await prepare(f.env);
   const outputs = await f.outputs();
+  assert.equal(outputs['cache-path'], result.cacheRoot);
+  assert.equal(outputs['konan-cache-enabled'], 'true');
+  assert.equal(outputs['konan-cache-path'], path.join(homedir(), '.konan'));
+});
+
+test('native caching can be disabled independently of toolchain caching', async t => {
+  const f = await fixture(t, { INPUT_CACHE_KONAN: 'false' });
+  const result = await prepare(f.env);
+  const outputs = await f.outputs();
+  assert.equal(outputs['cache-enabled'], 'true');
   assert.equal(outputs['cache-path'], result.cacheRoot);
   assert.equal(outputs['konan-cache-enabled'], 'false');
   assert.equal(outputs['konan-cache-path'], '');
 });
 
-test('native caching opts into the compiler default directory with a separate namespace', async t => {
+test('explicit native caching uses the compiler default directory with a separate namespace', async t => {
   const f = await fixture(t, { INPUT_CACHE_KONAN: 'true' });
   await prepare(f.env);
   const outputs = await f.outputs();
@@ -61,13 +71,15 @@ test('native caching preserves a custom KONAN_DATA_DIR and warm contents', async
   assert.doesNotMatch(await readFile(f.env.GITHUB_ENV, 'utf8'), /^KONAN_DATA_DIR=/m);
 });
 
-test('cache false disables native caching even when requested', async t => {
-  const f = await fixture(t, { INPUT_CACHE: 'false', INPUT_CACHE_KONAN: 'true' });
-  await prepare(f.env);
-  const outputs = await f.outputs();
-  assert.equal(outputs['cache-enabled'], 'false');
-  assert.equal(outputs['konan-cache-enabled'], 'false');
-  assert.equal(outputs['konan-cache-path'], '');
+test('cache false disables native caching both by default and when explicitly requested', async t => {
+  const f = await fixture(t, { INPUT_CACHE: 'false' });
+  for (const env of [f.env, { ...f.env, INPUT_CACHE_KONAN: 'true' }]) {
+    await prepare(env);
+    const outputs = await f.outputs();
+    assert.equal(outputs['cache-enabled'], 'false');
+    assert.equal(outputs['konan-cache-enabled'], 'false');
+    assert.equal(outputs['konan-cache-path'], '');
+  }
 });
 
 test('invalid native cache options are rejected before downloading', async t => {
