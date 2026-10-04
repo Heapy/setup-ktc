@@ -52,12 +52,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - name: Configure native cache directory
+        shell: bash
+        run: printf 'KONAN_DATA_DIR=%s/setup-ktc-native-cache\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: ./
         with:
           cache-key-suffix: smoke-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Write cache round-trip marker
         shell: bash
-        run: echo round-trip > "$KOTLIN_SHARED_CACHE_DIR/round-trip-marker"
+        run: |
+          echo round-trip > "$KOTLIN_SHARED_CACHE_DIR/round-trip-marker"
+          mkdir -p "$KONAN_DATA_DIR"
+          echo native-round-trip > "$KONAN_DATA_DIR/round-trip-marker"
   cache-restore:
     needs: cache-seed
     runs-on: ubuntu-24.04
@@ -66,6 +72,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+      - name: Configure native cache directory
+        shell: bash
+        run: printf 'KONAN_DATA_DIR=%s/setup-ktc-native-cache\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: ./
         id: setup
         with:
@@ -75,6 +84,9 @@ jobs:
         shell: bash
         env:
           CACHE_HIT: ${{ steps.setup.outputs.cache-hit }}
+          KONAN_CACHE_HIT: ${{ steps.setup.outputs.konan-cache-hit }}
         run: |
           test "$CACHE_HIT" = 'true'
+          test "$KONAN_CACHE_HIT" = 'true'
           test "$(cat "$KOTLIN_SHARED_CACHE_DIR/round-trip-marker")" = 'round-trip'
+          test "$(cat "$KONAN_DATA_DIR/round-trip-marker")" = 'native-round-trip'

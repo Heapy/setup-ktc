@@ -3,7 +3,7 @@
 
 import { createHash } from 'node:crypto';
 import { appendFile, chmod, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
@@ -92,6 +92,12 @@ function record(file, key, value) {
 
 export async function prepare(env = process.env) {
   const cacheEnabled = parseBoolean(env.INPUT_CACHE ?? 'true', 'cache');
+  const cacheKonan = parseBoolean(env.INPUT_CACHE_KONAN ?? 'true', 'cache-konan');
+  const konanEnabled = cacheEnabled && cacheKonan;
+  const konanPath = konanEnabled ? (env.KONAN_DATA_DIR || path.join(homedir(), '.konan')) : '';
+  if (konanEnabled && (!path.isAbsolute(konanPath) || /[\r\n]/.test(konanPath))) {
+    throw new Error('KONAN_DATA_DIR must be an absolute path without line breaks when cache-konan is enabled');
+  }
   const readOnly = cachePolicy(env.INPUT_CACHE_READ_ONLY ?? 'auto', env.GITHUB_EVENT_NAME);
   parseBoolean(env.INPUT_VERIFY ?? 'true', 'verify');
   const directory = path.resolve(env.GITHUB_WORKSPACE ?? process.cwd(), env.INPUT_DIRECTORY ?? '.');
@@ -115,6 +121,8 @@ export async function prepare(env = process.env) {
   }
   const keys = cacheKeys({ os: env.RUNNER_OS ?? process.platform, arch: env.RUNNER_ARCH ?? process.arch,
     version, checksum: upstream.checksum, suffix: env.INPUT_CACHE_SUFFIX ?? '', configHash: env.INPUT_CONFIG_HASH ?? '' });
+  const konanKeys = { key: keys.key.replace(/^ktc-v1-/, 'ktc-konan-v1-'),
+    prefix: keys.prefix.replace(/^ktc-v1-/, 'ktc-konan-v1-') };
   const wrapper = path.join(bin, wrapperName);
   await writeFile(wrapper, bytes);
   if (process.platform !== 'win32') await chmod(wrapper, 0o755);
@@ -133,7 +141,9 @@ export async function prepare(env = process.env) {
   })) await record(env.GITHUB_ENV, key, value);
   for (const [key, value] of Object.entries({ version, bin, wrapper, 'cache-path': cacheRoot,
     'cache-enabled': String(cacheEnabled), 'cache-read-only': String(readOnly),
-    'cache-key': keys.key, 'cache-prefix': keys.prefix })) {
+    'cache-key': keys.key, 'cache-prefix': keys.prefix,
+    'konan-cache-enabled': String(konanEnabled), 'konan-cache-path': konanPath,
+    'konan-cache-key': konanKeys.key, 'konan-cache-prefix': konanKeys.prefix })) {
     await record(env.GITHUB_OUTPUT, key, value);
   }
   console.log(`Installed Kotlin Toolchain ${version} wrapper to ${bin}`);
