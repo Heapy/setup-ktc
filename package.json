@@ -1,6 +1,6 @@
 {
   "name": "setup-ktc",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "GitHub Action to install and cache JetBrains Kotlin Toolchain",

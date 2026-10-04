@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
 - Cache Kotlin/Native data by default, respecting `KONAN_DATA_DIR` and the existing
   restore-only policy. Disable it with `cache-konan: false` or `cache: false`.
