@@ -13,6 +13,9 @@ inputs:
   cache:
     description: Cache toolchain distributions, dependencies and provisioned JDKs
     default: 'true'
+  cache-konan:
+    description: Also cache Kotlin/Native data in KONAN_DATA_DIR or ~/.konan; requires cache true
+    default: 'false'
   cache-key-suffix:
     description: Extra cache key component for manually invalidating caches
     default: ''
@@ -32,6 +35,9 @@ outputs:
   cache-hit:
     description: Whether the exact cache key was restored (empty when caching is disabled)
     value: ${{ steps.cache.outputs.cache-hit || steps.restore.outputs.cache-hit }}
+  konan-cache-hit:
+    description: Whether the exact Kotlin/Native cache key was restored (empty when native caching is disabled)
+    value: ${{ steps.konan-cache.outputs.cache-hit || steps.konan-restore.outputs.cache-hit }}
   bin-path:
     description: Directory added to PATH
     value: ${{ steps.prepare.outputs.bin }}
@@ -46,6 +52,7 @@ runs:
         INPUT_VERSION: ${{ inputs.version }}
         INPUT_DIRECTORY: ${{ inputs.working-directory }}
         INPUT_CACHE: ${{ inputs.cache }}
+        INPUT_CACHE_KONAN: ${{ inputs.cache-konan }}
         INPUT_SHA256: ${{ inputs.wrapper-sha256 }}
         INPUT_VERIFY: ${{ inputs.verify }}
         INPUT_CACHE_READ_ONLY: ${{ inputs.cache-read-only }}
@@ -68,6 +75,22 @@ runs:
         path: ${{ steps.prepare.outputs.cache-path }}
         key: ${{ steps.prepare.outputs.cache-key }}
         restore-keys: ${{ steps.prepare.outputs.cache-prefix }}
+    - name: Restore Kotlin/Native data
+      id: konan-cache
+      if: steps.prepare.outputs.konan-cache-enabled == 'true' && steps.prepare.outputs.cache-read-only == 'false'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.prepare.outputs.konan-cache-path }}
+        key: ${{ steps.prepare.outputs.konan-cache-key }}
+        restore-keys: ${{ steps.prepare.outputs.konan-cache-prefix }}
+    - name: Restore Kotlin/Native data without saving
+      id: konan-restore
+      if: steps.prepare.outputs.konan-cache-enabled == 'true' && steps.prepare.outputs.cache-read-only == 'true'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+      with:
+        path: ${{ steps.prepare.outputs.konan-cache-path }}
+        key: ${{ steps.prepare.outputs.konan-cache-key }}
+        restore-keys: ${{ steps.prepare.outputs.konan-cache-prefix }}
     - name: Provision and verify Kotlin Toolchain
       if: inputs.verify == 'true'
       shell: bash

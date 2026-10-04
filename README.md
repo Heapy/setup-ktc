@@ -31,12 +31,14 @@ Versions before 0.12 are unsupported.
 | `version` | `auto` | Exact toolchain version, or project-wrapper detection |
 | `working-directory` | `.` | Project directory relative to workspace |
 | `cache` | `true` | Cache distributions, dependencies, and JDKs |
+| `cache-konan` | `false` | Also cache Kotlin/Native data in `KONAN_DATA_DIR` or `~/.konan`; requires `cache: true` |
 | `cache-key-suffix` | empty | Manually invalidate a cache namespace |
 | `cache-read-only` | `auto` | Restore only unless the event is push, workflow_dispatch, or schedule |
 | `wrapper-sha256` | empty | Trusted SHA-256 of the OS-specific wrapper |
 | `verify` | `true` | Provision the CLI and run `kotlin --version` during setup |
 
-Outputs: `version`, `bin-path`, and `cache-hit` (empty when caching is disabled).
+Outputs: `version`, `bin-path`, and `cache-hit` (empty when caching is disabled),
+plus `konan-cache-hit` (empty when native caching is disabled).
 With `verify: false`, distribution provisioning is deferred until the first CLI call.
 
 ## Behavior and security
@@ -88,8 +90,24 @@ saving where GitHub's cache token permits it. GitHub's job-level `cache-mode`
 remains authoritative. Keep a successful default-branch build to warm shared caches.
 Do not use `pull_request_target` to execute untrusted fork code.
 
-These caches cover the two Kotlin Toolchain cache roots. Separate Kotlin/Native
-`~/.konan` caches are not included.
+These caches cover the two Kotlin Toolchain cache roots. For projects with native
+targets, opt into Kotlin/Native data caching as well:
+
+```yaml
+- uses: Heapy/setup-ktc@v1
+  with:
+    version: auto
+    cache-konan: true
+```
+
+Native data uses a separate cache namespace with the same OS, runner architecture,
+toolchain pin, configuration hash, and `cache-key-suffix` boundaries. The same
+`cache-read-only` policy applies, including restore-only defaults for PRs.
+`cache: false` disables both caches. Project build outputs are still excluded.
+
+The native path is `~/.konan` unless `KONAN_DATA_DIR` is already configured. A custom
+path must be absolute and contain no line breaks. The action preserves that
+environment setting and existing contents; it does not relocate native data.
 
 The nested cache action is pinned by SHA and updated through Dependabot.
 The action does not require repository write permissions or a GitHub token input.
@@ -105,7 +123,7 @@ There are no npm runtime dependencies or generated bundles. `action.yml` calls
 `scripts/setup.mjs` directly. CI tests inputs on all three operating systems and
 uses the action itself to build, test, and package an official JVM fixture.
 Validate workflows locally with `actionlint .github/workflows/ci.yaml`.
-Trusted CI runs also test a real save/restore round trip across two fresh jobs.
+Trusted CI runs also test real toolchain and native-data save/restore round trips across two fresh jobs.
 PR CI tests restore-only use without requiring cache-write access.
 
 Before release, require green CI, review changes, create a versioned release, and
